@@ -1,0 +1,10 @@
+hostname,usuario,setor,mac,localizacao,modelo,patrimonio
+pc-fin-001,Ana Souza,Financeiro,00:1A:2B:3C:4D:01,Ilha 1 - Mesa 1,Dell OptiPlex 7090,FIN-2026-001
+pc-fin-002,Carlos Lima,Financeiro,00:1A:2B:3C:4D:02,Ilha 1 - Mesa 2,Dell OptiPlex 7090,FIN-2026-002
+pc-fin-003,Mariana Alves,Financeiro,00:1A:2B:3C:4D:03,Ilha 1 - Mesa 3,Lenovo ThinkCentre M70q,FIN-2026-003
+pc-rh-001,Bruno Rocha,Recursos Humanos,00:1A:2B:3C:4D:11,Ilha 2 - Mesa 1,HP ProDesk 400 G9,RH-2026-001
+pc-rh-002,Juliana Melo,Recursos Humanos,00:1A:2B:3C:4D:12,Ilha 2 - Mesa 2,HP ProDesk 400 G9,RH-2026-002
+pc-ti-001,Thiago Santos,Tecnologia,00:1A:2B:3C:4D:21,Lab TI - Bancada 1,Dell Latitude 5440,TI-2026-001
+pc-ti-002,Fernanda Costa,Tecnologia,00:1A:2B:3C:4D:22,Lab TI - Bancada 2,Dell Latitude 5440,TI-2026-002
+pc-op-001,Renato Silva,Operacoes,00:1A:2B:3C:4D:31,Galpao - Mesa 4,Lenovo ThinkPad E14,OP-2026-001
+pc-op-002,Patricia Gomes,Operacoes,00:1A:2B:3C:4D:32,Galpao - Mesa 5,Lenovo ThinkPad E14,OP-2026-002

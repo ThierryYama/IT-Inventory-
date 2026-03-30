@@ -10,6 +10,7 @@ import { SectorFilter } from './components/sector-filter'
 import { SectorSection } from './components/sector-section'
 import { spreadsheetColumns } from './constants/spreadsheet-columns'
 import { filterSectorGroups } from './helpers/filter-sector-groups'
+import { useLocalStorage } from './hooks/use-local-storage'
 import { groupAssetsBySector } from './helpers/group-assets-by-sector'
 import { parseSlotId } from './helpers/parse-slot-id'
 import { parseSpreadsheetFile } from './helpers/parse-spreadsheet-file'
@@ -23,9 +24,17 @@ interface SummaryCard {
   readonly icon: typeof Building2
 }
 
+const LOCAL_STORAGE_KEYS = {
+  assetRecords: 'asset-visualizer:asset-records',
+  fileName: 'asset-visualizer:file-name',
+} as const
+
 export function App(): ReactElement {
-  const [assetRecords, setAssetRecords] = useState<readonly AssetRecord[]>([])
-  const [fileName, setFileName] = useState<string>('')
+  const [assetRecords, setAssetRecords, clearAssetRecords] = useLocalStorage<readonly AssetRecord[]>(
+    LOCAL_STORAGE_KEYS.assetRecords,
+    [],
+  )
+  const [fileName, setFileName, clearFileName] = useLocalStorage<string>(LOCAL_STORAGE_KEYS.fileName, '')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [isParsing, setIsParsing] = useState<boolean>(false)
   const [searchValue, setSearchValue] = useState<string>('')
@@ -104,6 +113,14 @@ export function App(): ReactElement {
   function handleDragCancel(): void {
     setActiveAssetId('')
   }
+  function handleClearData(): void {
+    clearAssetRecords()
+    clearFileName()
+    setErrorMessage('')
+    setSearchValue('')
+    setSelectedSectorId('all')
+    setActiveAssetId('')
+  }
   return (
     <DndContext
       sensors={sensors}
@@ -154,7 +171,9 @@ export function App(): ReactElement {
             <FileUploader
               fileName={fileName}
               errorMessage={errorMessage}
+              hasImportedData={assetRecords.length > 0}
               isParsing={isParsing}
+              onClearData={handleClearData}
               onFileSelect={handleFileSelect}
             />
             <SectorFilter
