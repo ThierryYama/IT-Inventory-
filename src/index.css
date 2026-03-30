@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-slate-950 text-slate-100 antialiased;
+    margin: 0;
+    font-family: Inter, "Segoe UI", sans-serif;
+    background-image:
+      radial-gradient(circle at top left, rgba(56, 189, 248, 0.12), transparent 28%),
+      radial-gradient(circle at top right, rgba(168, 85, 247, 0.14), transparent 24%),
+      linear-gradient(180deg, #020617 0%, #0f172a 100%);
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .panel-surface {
+    @apply rounded-3xl border border-white/10 bg-white/5 shadow-2xl shadow-slate-950/40 backdrop-blur;
+  }
+
+  .screen-only {
+    @apply print:hidden;
+  }
+
+  .print-sheet {
+    print-color-adjust: exact;
+  }
+
+  @media print {
+    body {
+      background: white;
+    }
+
+    #root {
+      min-height: auto;
+    }
+  }
+}
