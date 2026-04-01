@@ -1,13 +1,13 @@
 import type { ReactElement } from 'react'
-import type { SectorGroup } from '../types/sector-group'
+import type { SectorSummary } from '../types/sector-summary'
 
 interface SectorFilterProps {
-  readonly sectorGroups: readonly SectorGroup[]
-  readonly selectedSectorId: string
-  readonly onSelectSector: (sectorId: string) => void
+  readonly sectors: readonly SectorSummary[]
+  readonly selectedSectorName: string
+  readonly onSelectSector: (sectorName: string) => void
 }
 
-export function SectorFilter({ sectorGroups, selectedSectorId, onSelectSector }: SectorFilterProps): ReactElement {
+export function SectorFilter({ sectors, selectedSectorName, onSelectSector }: SectorFilterProps): ReactElement {
   return (
     <section className="panel-surface screen-only space-y-4 p-5">
       <div>
@@ -19,27 +19,27 @@ export function SectorFilter({ sectorGroups, selectedSectorId, onSelectSector }:
           type="button"
           onClick={() => onSelectSector('all')}
           className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${
-            selectedSectorId === 'all'
+            selectedSectorName === 'all'
               ? 'bg-cyan-400 text-slate-950'
               : 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
           }`}
         >
           <span>Todos os setores</span>
-          <span>{sectorGroups.length}</span>
+          <span>{sectors.length}</span>
         </button>
-        {sectorGroups.map((sectorGroup: SectorGroup) => (
+        {sectors.map((sector) => (
           <button
-            key={sectorGroup.id}
+            key={sector.id}
             type="button"
-            onClick={() => onSelectSector(sectorGroup.id)}
+            onClick={() => onSelectSector(sector.name)}
             className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${
-              selectedSectorId === sectorGroup.id
+              selectedSectorName === sector.name
                 ? 'bg-cyan-400 text-slate-950'
                 : 'border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10'
             }`}
           >
-            <span className="truncate">{sectorGroup.sectorName}</span>
-            <span>{sectorGroup.assets.length}</span>
+            <span className="truncate">{sector.name}</span>
+            <span>{sector.assetCount}</span>
           </button>
         ))}
       </div>

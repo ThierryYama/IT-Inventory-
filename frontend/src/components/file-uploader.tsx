@@ -1,4 +1,4 @@
-import { Download, FileSpreadsheet, RefreshCcw, Trash2, Upload } from 'lucide-react'
+import { Download, FileSpreadsheet, RefreshCcw, Upload } from 'lucide-react'
 import { useRef, type ChangeEvent, type DragEvent, type ReactElement } from 'react'
 
 interface FileUploaderProps {
@@ -6,7 +6,6 @@ interface FileUploaderProps {
   readonly errorMessage: string
   readonly hasImportedData: boolean
   readonly isParsing: boolean
-  readonly onClearData: () => void
   readonly onFileSelect: (file: File) => Promise<void>
 }
 
@@ -19,7 +18,6 @@ export function FileUploader({
   errorMessage,
   hasImportedData,
   isParsing,
-  onClearData,
   onFileSelect,
 }: FileUploaderProps): ReactElement {
   const inputReference = useRef<HTMLInputElement | null>(null)
@@ -66,9 +64,9 @@ export function FileUploader({
         </div>
         <div className="space-y-1">
           <p className="font-medium text-white">
-            {isParsing ? 'Lendo planilha...' : 'Clique ou arraste um arquivo .xlsx, .xls ou .csv'}
+            {isParsing ? 'Enviando planilha...' : 'Clique ou arraste um arquivo .xlsx, .xls ou .csv'}
           </p>
-          <p className="text-sm text-slate-400">A leitura acontece apenas no navegador, sem backend.</p>
+          <p className="text-sm text-slate-400">A importacao e processada pelo backend e salva no banco de dados.</p>
         </div>
       </button>
       <input
@@ -83,9 +81,13 @@ export function FileUploader({
         <p className="truncate rounded-2xl border border-white/10 bg-white/5 px-3 py-2">
           {fileName === '' ? 'Nenhum arquivo carregado' : fileName}
         </p>
-        <p className="text-xs leading-5 text-slate-400">Os dados importados ficam salvos neste navegador ate voce limpar.</p>
+        <p className="text-xs leading-5 text-slate-400">
+          {hasImportedData
+            ? 'Os dados exibidos refletem o inventario salvo no backend.'
+            : 'Importe uma planilha para popular o inventario persistido no backend.'}
+        </p>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-2">
         <a
           href="/assets-exemplo.csv"
           download="assets-exemplo.csv"
@@ -94,15 +96,6 @@ export function FileUploader({
           <Download className="size-4" />
           Baixar CSV de exemplo
         </a>
-        <button
-          type="button"
-          onClick={onClearData}
-          disabled={!hasImportedData && fileName === ''}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-sm font-medium text-rose-100 transition hover:border-rose-300 hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Trash2 className="size-4" />
-          Limpar dados salvos
-        </button>
       </div>
       {errorMessage !== '' ? (
         <div className="rounded-2xl border border-rose-400/30 bg-rose-400/10 px-3 py-3 text-sm text-rose-200">

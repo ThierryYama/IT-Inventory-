@@ -1,19 +1,20 @@
 interface ParsedSlotId {
-  readonly sectorId: string
-  readonly positionIndex: number
+  readonly islandId: number
+  readonly slotIndex: number
 }
 
 export function parseSlotId(slotId: string): ParsedSlotId | null {
-  const [prefix, sectorId, positionIndexValue] = slotId.split(':')
-  if (prefix !== 'slot' || !sectorId || !positionIndexValue) {
+  const [prefix, islandIdValue, slotIndexValue] = slotId.split(':')
+  if (prefix !== 'slot' || !islandIdValue || !slotIndexValue) {
     return null
   }
-  const positionIndex: number = Number(positionIndexValue)
-  if (Number.isNaN(positionIndex)) {
+  const islandId: number = Number(islandIdValue)
+  const slotIndex: number = Number(slotIndexValue)
+  if (Number.isNaN(islandId) || Number.isNaN(slotIndex)) {
     return null
   }
   return {
-    sectorId,
-    positionIndex,
+    islandId,
+    slotIndex,
   }
 }

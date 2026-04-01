@@ -6,9 +6,12 @@ import { AssetNode } from './asset-node'
 interface IslandSlotProps {
   readonly asset?: AssetRecord
   readonly slotId: string
+  readonly onDeleteAsset: (asset: AssetRecord) => void
+  readonly onEditAsset: (asset: AssetRecord) => void
+  readonly onViewHistory: (asset: AssetRecord) => void
 }
 
-export function IslandSlot({ asset, slotId }: IslandSlotProps): ReactElement {
+export function IslandSlot({ asset, slotId, onDeleteAsset, onEditAsset, onViewHistory }: IslandSlotProps): ReactElement {
   const { isOver, setNodeRef } = useDroppable({
     id: slotId,
   })
@@ -19,7 +22,7 @@ export function IslandSlot({ asset, slotId }: IslandSlotProps): ReactElement {
         isOver ? 'border-cyan-300/60 bg-cyan-400/10' : ''
       }`}
     >
-      <AssetNode asset={asset} slotId={slotId} />
+      <AssetNode asset={asset} slotId={slotId} onDelete={onDeleteAsset} onEdit={onEditAsset} onViewHistory={onViewHistory} />
     </div>
   )
 }

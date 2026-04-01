@@ -1,3 +1,3 @@
-export function createSlotId(sectorId: string, positionIndex: number): string {
-  return `slot:${sectorId}:${positionIndex}`
+export function createSlotId(islandId: number, slotIndex: number): string {
+  return `slot:${islandId}:${slotIndex}`
 }

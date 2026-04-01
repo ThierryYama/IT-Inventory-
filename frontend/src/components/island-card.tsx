@@ -1,29 +1,25 @@
 import type { ReactElement } from 'react'
 import { motion } from 'framer-motion'
-import { islandSize } from '../constants/island-size'
 import { createSlotId } from '../helpers/create-slot-id'
 import type { AssetRecord } from '../types/asset-record'
 import type { AssetIsland } from '../types/asset-island'
 import { IslandSlot } from './island-slot'
 
 interface IslandCardProps {
-  readonly sectorId: string
   readonly island: AssetIsland
+  readonly onDeleteAsset: (asset: AssetRecord) => void
+  readonly onEditAsset: (asset: AssetRecord) => void
+  readonly onViewHistory: (asset: AssetRecord) => void
 }
 
-function buildIslandSlots(assets: readonly AssetRecord[]): readonly (AssetRecord | undefined)[] {
-  return Array.from({ length: islandSize }, (_, index: number) =>
-    assets.find((asset: AssetRecord) => asset.positionIndex === index),
+function buildIslandSlots(island: AssetIsland): readonly (AssetRecord | undefined)[] {
+  return Array.from({ length: island.capacity }, (_, index: number) =>
+    island.assets.find((asset: AssetRecord) => asset.slotIndex === index + 1),
   )
 }
 
-export function IslandCard({ sectorId, island }: IslandCardProps): ReactElement {
-  const islandSlots: readonly (AssetRecord | undefined)[] = buildIslandSlots(
-    island.assets.map((asset: AssetRecord) => ({
-      ...asset,
-      positionIndex: asset.positionIndex - island.slotStartIndex,
-    })),
-  )
+export function IslandCard({ island, onDeleteAsset, onEditAsset, onViewHistory }: IslandCardProps): ReactElement {
+  const islandSlots: readonly (AssetRecord | undefined)[] = buildIslandSlots(island)
   return (
     <motion.section
       layout
@@ -37,18 +33,21 @@ export function IslandCard({ sectorId, island }: IslandCardProps): ReactElement 
       <div className="relative mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">Topologia visual</p>
-          <h3 className="text-xl font-semibold text-white">{island.name}</h3>
+          <h3 className="text-xl font-semibold text-white">{`Ilha ${island.sequenceNumber}`}</h3>
         </div>
         <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300">
-          {island.assets.length} / {islandSize} ativos
+          {island.assets.length} / {island.capacity} ativos
         </span>
       </div>
       <div className="relative grid gap-4 md:grid-cols-2">
         {islandSlots.map((asset: AssetRecord | undefined, index: number) => (
           <IslandSlot
-            key={asset?.id ?? `${island.id}-slot-${index + 1}`}
+            key={asset?.id ?? `island-${island.id}-slot-${index + 1}`}
             asset={asset}
-            slotId={createSlotId(sectorId, island.slotStartIndex + index)}
+            slotId={createSlotId(island.id, index + 1)}
+            onDeleteAsset={onDeleteAsset}
+            onEditAsset={onEditAsset}
+            onViewHistory={onViewHistory}
           />
         ))}
       </div>
