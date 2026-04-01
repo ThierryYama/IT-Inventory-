@@ -8,6 +8,7 @@ from app.models.history import AssetHistory
 from app.models.island import ISLAND_CAPACITY, Island
 from app.models.sector import Sector
 from app.schemas.asset import AssetCreateSchema, AssetMoveSchema, AssetUpdateSchema
+from app.schemas.island import IslandCreateSchema
 from app.services.history_service import recordAssetHistory
 from app.utils.text import normalizeOptionalText
 
@@ -51,7 +52,7 @@ async def assignAssetToNextAvailableSlot(asset: Asset, connection: BaseDBAsyncCl
             asset.slot_index = slot_index
             await asset.save(using_db=connection, update_fields=['island_id', 'slot_index', 'updated_at'])
             return
-    next_sequence_number: int = len(islands) + 1
+    next_sequence_number: int = await getNextIslandSequenceNumber(asset.sector_id, connection)
     island: Island = await Island.create(
         sector_id=asset.sector_id,
         sequence_number=next_sequence_number,
@@ -64,11 +65,33 @@ async def assignAssetToNextAvailableSlot(asset: Asset, connection: BaseDBAsyncCl
 
 
 async def cleanupSectorIslands(sector_id: int, connection: BaseDBAsyncClient) -> None:
-    islands: list[Island] = await Island.filter(sector_id=sector_id).using_db(connection)
-    for island in islands:
+    return None
+
+
+async def createManualIsland(sector_name: str, payload: IslandCreateSchema) -> Island:
+    async with in_transaction() as connection:
+        sector: Sector = await getOrCreateSectorByName(sector_name, connection)
+        next_sequence_number: int = await getNextIslandSequenceNumber(sector.id, connection)
+        island: Island = await Island.create(
+            sector_id=sector.id,
+            sequence_number=next_sequence_number,
+            capacity=payload.capacity,
+            using_db=connection,
+        )
+    return island
+
+
+async def deleteEmptyIsland(island_id: int) -> None:
+    async with in_transaction() as connection:
+        island: Island | None = await Island.filter(id=island_id).using_db(connection).get_or_none()
+        if island is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Ilha nao encontrada.')
         asset_count: int = await Asset.filter(island_id=island.id).using_db(connection).count()
-        if asset_count == 0:
-            await island.delete(using_db=connection)
+        if asset_count > 0:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Apenas ilhas vazias podem ser excluidas.')
+        sector_id: int = island.sector_id
+        await island.delete(using_db=connection)
+        await resequenceSectorIslands(sector_id, connection)
 
 
 async def createAsset(payload: AssetCreateSchema) -> Asset:
@@ -147,6 +170,31 @@ async def getOrCreateIsland(
         capacity=ISLAND_CAPACITY,
         using_db=connection,
     )
+
+
+async def getNextIslandSequenceNumber(sector_id: int, connection: BaseDBAsyncClient) -> int:
+    last_island: Island | None = await (
+        Island.filter(sector_id=sector_id)
+        .order_by('-sequence_number')
+        .using_db(connection)
+        .first()
+    )
+    if last_island is None:
+        return 1
+    return last_island.sequence_number + 1
+
+
+async def resequenceSectorIslands(sector_id: int, connection: BaseDBAsyncClient) -> None:
+    islands: list[Island] = await (
+        Island.filter(sector_id=sector_id)
+        .order_by('sequence_number', 'id')
+        .using_db(connection)
+    )
+    for index, island in enumerate(islands, start=1):
+        if island.sequence_number == index:
+            continue
+        island.sequence_number = index
+        await island.save(using_db=connection, update_fields=['sequence_number', 'updated_at'])
 
 
 async def getOrCreateSectorByName(sector_name: str, connection: BaseDBAsyncClient) -> Sector:
@@ -255,26 +303,44 @@ async def rebalanceSectorIslands(sector_id: int, connection: BaseDBAsyncClient) 
         .order_by('name', 'id')
         .using_db(connection)
     )
+    islands: list[Island] = await (
+        Island.filter(sector_id=sector_id)
+        .order_by('sequence_number')
+        .using_db(connection)
+    )
     if len(assets) == 0:
-        await Island.filter(sector_id=sector_id).using_db(connection).delete()
         return
-    required_islands: int = (len(assets) + ISLAND_CAPACITY - 1) // ISLAND_CAPACITY
-    island_map: dict[int, Island] = {}
-    for sequence_number in range(1, required_islands + 1):
-        island_map[sequence_number] = await getOrCreateIsland(
+    if len(islands) == 0:
+        islands = [
+            await Island.create(
+                sector_id=sector_id,
+                sequence_number=1,
+                capacity=ISLAND_CAPACITY,
+                using_db=connection,
+            )
+        ]
+    total_capacity: int = sum(island.capacity for island in islands)
+    next_sequence_number: int = islands[-1].sequence_number + 1
+    while total_capacity < len(assets):
+        island: Island = await Island.create(
             sector_id=sector_id,
-            sequence_number=sequence_number,
-            connection=connection,
+            sequence_number=next_sequence_number,
+            capacity=ISLAND_CAPACITY,
+            using_db=connection,
         )
-    for position, asset in enumerate(assets):
-        sequence_number: int = (position // ISLAND_CAPACITY) + 1
-        slot_index: int = (position % ISLAND_CAPACITY) + 1
-        asset.island_id = island_map[sequence_number].id
-        asset.slot_index = slot_index
-        await asset.save(using_db=connection, update_fields=['island_id', 'slot_index', 'updated_at'])
-    extra_islands: list[Island] = await Island.filter(sector_id=sector_id, sequence_number__gt=required_islands).using_db(connection)
-    for island in extra_islands:
-        await island.delete(using_db=connection)
+        islands.append(island)
+        total_capacity += island.capacity
+        next_sequence_number += 1
+    asset_index: int = 0
+    for island in islands:
+        for slot_index in range(1, island.capacity + 1):
+            if asset_index >= len(assets):
+                return
+            asset: Asset = assets[asset_index]
+            asset.island_id = island.id
+            asset.slot_index = slot_index
+            await asset.save(using_db=connection, update_fields=['island_id', 'slot_index', 'updated_at'])
+            asset_index += 1
 
 
 async def resolveTargetIsland(payload: AssetMoveSchema, connection: BaseDBAsyncClient) -> Island:

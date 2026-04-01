@@ -204,6 +204,16 @@ function buildAssetPayload(values: AssetFormValues): Record<string, string | nul
 const apiClient: AxiosInstance = createApiClient()
 
 export const inventoryApi = {
+  async createIsland(sectorName: string, capacity: number): Promise<AssetIsland> {
+    const encodedSectorName: string = encodeURIComponent(sectorName)
+    const response = await apiClient.post<ApiIsland>(`/sectors/${encodedSectorName}/islands`, {
+      capacity,
+    })
+    return mapAssetIsland(response.data)
+  },
+  async deleteIsland(islandId: number): Promise<void> {
+    await apiClient.delete(`/sectors/islands/${islandId}`)
+  },
   async createAsset(values: AssetFormValues): Promise<AssetRecord> {
     const response = await apiClient.post<ApiAssetRecord>('/assets', buildAssetPayload(values))
     return mapAssetRecord(response.data)

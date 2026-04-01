@@ -45,7 +45,7 @@ class AssetUpdateSchema(BaseModel):
 
 
 class AssetMoveSchema(BaseModel):
-    target_slot_index: int = Field(ge=1, le=4)
+    target_slot_index: int = Field(ge=1)
     target_island_id: int | None = Field(default=None, ge=1)
     target_sector_name: str | None = Field(default=None, min_length=1, max_length=120)
     target_island_sequence: int | None = Field(default=None, ge=1)

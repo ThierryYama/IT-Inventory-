@@ -94,29 +94,29 @@ function DraggableAssetNode({
       className="flex min-h-48 flex-col justify-between rounded-3xl border border-cyan-400/20 bg-slate-950/80 p-4 shadow-lg shadow-cyan-950/20 transition"
     >
       <div className="space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200">
+        <div className="flex items-start gap-2">
+          <div className="inline-flex min-w-0 flex-1 items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-slate-200">
             <UserRound className="size-3.5 text-cyan-300" />
             <span className="truncate">{asset.userName ?? 'Sem usuario'}</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1.5 self-start">
             {slotId !== '' && canInteract ? (
               <button
                 type="button"
                 {...attributes}
                 {...listeners}
-                className="rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 active:cursor-grabbing"
+                className="shrink-0 rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10 active:cursor-grabbing"
                 aria-label="Mover maquina"
               >
                 <GripVertical className="size-4" />
               </button>
             ) : null}
             {canInteract ? (
-              <div ref={menuReference} className="relative">
+              <div ref={menuReference} className="relative shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsMenuOpen((currentValue: boolean) => !currentValue)}
-                  className="rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10"
+                  className="shrink-0 rounded-2xl border border-white/10 bg-white/5 p-2 text-slate-300 transition hover:bg-white/10"
                   aria-label="Abrir acoes da maquina"
                 >
                   <EllipsisVertical className="size-4" />

@@ -3,7 +3,9 @@ from fastapi import APIRouter, HTTPException, status
 from app.models.asset import Asset
 from app.models.island import Island
 from app.models.sector import Sector
+from app.schemas.island import IslandCreateSchema, IslandResponseSchema
 from app.schemas.sector import SectorIslandsResponseSchema, SectorResponseSchema
+from app.services.asset_service import createManualIsland, deleteEmptyIsland
 from app.services.serializers import buildIslandResponse, buildSectorIslandsResponse, buildSectorResponse
 
 router = APIRouter(prefix='/api/sectors', tags=['sectors'])
@@ -35,3 +37,14 @@ async def listSectorIslandsRoute(sector_name: str) -> SectorIslandsResponseSchem
         )
         island_responses.append(buildIslandResponse(island, assets))
     return buildSectorIslandsResponse(sector, island_responses)
+
+
+@router.post('/{sector_name}/islands', response_model=IslandResponseSchema, status_code=status.HTTP_201_CREATED)
+async def createSectorIslandRoute(sector_name: str, payload: IslandCreateSchema) -> IslandResponseSchema:
+    island: Island = await createManualIsland(sector_name, payload)
+    return buildIslandResponse(island, [])
+
+
+@router.delete('/islands/{island_id}', status_code=status.HTTP_204_NO_CONTENT)
+async def deleteSectorIslandRoute(island_id: int) -> None:
+    await deleteEmptyIsland(island_id)

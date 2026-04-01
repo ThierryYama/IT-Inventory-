@@ -4,6 +4,7 @@ import { Building2, LayoutGrid, MonitorSmartphone, Upload } from 'lucide-react'
 import { useMemo, useState, type ReactElement } from 'react'
 import { AssetFormModal } from './components/asset-form-modal'
 import { AssetHistoryModal } from './components/asset-history-modal'
+import { IslandCreateModal } from './components/island-create-modal'
 import { AssetNode } from './components/asset-node'
 import { AssetResults } from './components/asset-results'
 import { EmptyState } from './components/empty-state'
@@ -15,6 +16,7 @@ import { ToastStack, type ToastItem } from './components/toast-stack'
 import { spreadsheetColumns } from './constants/spreadsheet-columns'
 import { parseSlotId } from './helpers/parse-slot-id'
 import { inventoryApi } from './services/api'
+import type { AssetIsland } from './types/asset-island'
 import type { AssetFormValues } from './types/asset-form-values'
 import type { AssetRecord } from './types/asset-record'
 import type { SectorGroup } from './types/sector-group'
@@ -42,6 +44,7 @@ export function App(): ReactElement {
   const [activeAssetId, setActiveAssetId] = useState<number | null>(null)
   const [editingAsset, setEditingAsset] = useState<AssetRecord | null>(null)
   const [historyAsset, setHistoryAsset] = useState<AssetRecord | null>(null)
+  const [creatingIslandSectorName, setCreatingIslandSectorName] = useState<string | null>(null)
   const [isAssetFormOpen, setIsAssetFormOpen] = useState<boolean>(false)
   const [toasts, setToasts] = useState<readonly ToastItem[]>([])
   const sensors = useSensors(
@@ -184,6 +187,36 @@ export function App(): ReactElement {
       showToast('Falha ao mover maquina', message, 'error')
     },
   })
+  const createIslandMutation = useMutation({
+    mutationFn: ({ sectorName, capacity }: { sectorName: string; capacity: number }) => inventoryApi.createIsland(sectorName, capacity),
+    onSuccess: async (island) => {
+      await invalidateInventoryQueries()
+      setCreatingIslandSectorName(null)
+      setErrorMessage('')
+      showToast(
+        'Ilha criada',
+        `A ilha ${island.sequenceNumber} foi criada com ${island.capacity} slots.`,
+        'success',
+      )
+    },
+    onError: (error: unknown) => {
+      const message: string = getErrorMessage(error, 'Nao foi possivel criar a ilha informada.')
+      setErrorMessage(message)
+      showToast('Falha ao criar ilha', message, 'error')
+    },
+  })
+  const deleteIslandMutation = useMutation({
+    mutationFn: (islandId: number) => inventoryApi.deleteIsland(islandId),
+    onSuccess: async () => {
+      await invalidateInventoryQueries()
+      setErrorMessage('')
+    },
+    onError: (error: unknown) => {
+      const message: string = getErrorMessage(error, 'Nao foi possivel excluir a ilha informada.')
+      setErrorMessage(message)
+      showToast('Falha ao excluir ilha', message, 'error')
+    },
+  })
   const sectors: readonly SectorSummary[] = sectorsQuery.data ?? []
   const sectorGroups: readonly SectorGroup[] = useMemo(() => {
     if (searchValue !== '') {
@@ -266,9 +299,34 @@ export function App(): ReactElement {
     setEditingAsset(null)
     setIsAssetFormOpen(true)
   }
+  function handleOpenCreateIsland(sectorName: string): void {
+    setCreatingIslandSectorName(sectorName)
+  }
   function handleEditAsset(asset: AssetRecord): void {
     setEditingAsset(asset)
     setIsAssetFormOpen(true)
+  }
+  function handleDeleteIsland(island: AssetIsland): void {
+    const shouldDelete: boolean = window.confirm(`Deseja excluir a ilha ${island.sequenceNumber}?`)
+    if (!shouldDelete) {
+      return
+    }
+    void deleteIslandMutation.mutateAsync(island.id, {
+      onSuccess: async () => {
+        await invalidateInventoryQueries()
+        setErrorMessage('')
+        showToast('Ilha excluida', `A ilha ${island.sequenceNumber} foi removida com sucesso.`, 'success')
+      },
+    })
+  }
+  async function handleSubmitIslandForm(capacity: number): Promise<void> {
+    if (creatingIslandSectorName === null) {
+      return
+    }
+    await createIslandMutation.mutateAsync({
+      sectorName: creatingIslandSectorName,
+      capacity,
+    })
   }
   async function handleSubmitAssetForm(values: AssetFormValues): Promise<void> {
     if (editingAsset) {
@@ -302,6 +360,12 @@ export function App(): ReactElement {
   }
   function handleCloseHistory(): void {
     setHistoryAsset(null)
+  }
+  function handleCloseIslandForm(): void {
+    if (createIslandMutation.isPending) {
+      return
+    }
+    setCreatingIslandSectorName(null)
   }
   return (
     <>
@@ -418,6 +482,8 @@ export function App(): ReactElement {
                       <SectorSection
                         key={sectorGroup.id}
                         sectorGroup={sectorGroup}
+                        onOpenCreateIsland={handleOpenCreateIsland}
+                        onDeleteIsland={handleDeleteIsland}
                         onDeleteAsset={handleDeleteAsset}
                         onEditAsset={handleEditAsset}
                         onViewHistory={handleOpenHistory}
@@ -445,6 +511,14 @@ export function App(): ReactElement {
           historyEntries={assetHistoryQuery.data ?? []}
           isLoading={assetHistoryQuery.isLoading}
           onClose={handleCloseHistory}
+        />
+      ) : null}
+      {creatingIslandSectorName ? (
+        <IslandCreateModal
+          isSubmitting={createIslandMutation.isPending}
+          sectorName={creatingIslandSectorName}
+          onClose={handleCloseIslandForm}
+          onSubmit={handleSubmitIslandForm}
         />
       ) : null}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />

@@ -1,11 +1,15 @@
 import type { ReactElement } from 'react'
+import type { AssetIsland } from '../types/asset-island'
 import type { AssetRecord } from '../types/asset-record'
 import { motion } from 'framer-motion'
+import { Plus } from 'lucide-react'
 import type { SectorGroup } from '../types/sector-group'
 import { IslandCard } from './island-card'
 
 interface SectorSectionProps {
   readonly sectorGroup: SectorGroup
+  readonly onOpenCreateIsland: (sectorName: string) => void
+  readonly onDeleteIsland: (island: AssetIsland) => void
   readonly onDeleteAsset: (asset: AssetRecord) => void
   readonly onEditAsset: (asset: AssetRecord) => void
   readonly onViewHistory: (asset: AssetRecord) => void
@@ -13,6 +17,8 @@ interface SectorSectionProps {
 
 export function SectorSection({
   sectorGroup,
+  onOpenCreateIsland,
+  onDeleteIsland,
   onDeleteAsset,
   onEditAsset,
   onViewHistory,
@@ -30,20 +36,29 @@ export function SectorSection({
           <p className="text-xs uppercase tracking-[0.32em] text-cyan-300/80">Setor</p>
           <h2 className="mt-2 text-2xl font-semibold text-white">{sectorGroup.sectorName}</h2>
         </div>
-        <div className="flex gap-3 text-sm text-slate-300">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-slate-300">
           <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-2">
             {sectorGroup.assetCount} computadores
           </span>
           <span className="rounded-full border border-white/10 bg-slate-950/60 px-3 py-2">
             {sectorGroup.islandCount} ilhas
           </span>
+          <button
+            type="button"
+            onClick={() => onOpenCreateIsland(sectorGroup.sectorName)}
+            className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-2 font-medium text-cyan-100 transition hover:bg-cyan-400/15"
+          >
+            <Plus className="size-4" />
+            Adicionar ilha
+          </button>
         </div>
       </header>
-      <div className="grid gap-5 2xl:grid-cols-2">
+      <div className="flex flex-wrap gap-5">
         {sectorGroup.islands.map((island) => (
           <IslandCard
             key={island.id}
             island={island}
+            onDeleteIsland={onDeleteIsland}
             onDeleteAsset={onDeleteAsset}
             onEditAsset={onEditAsset}
             onViewHistory={onViewHistory}

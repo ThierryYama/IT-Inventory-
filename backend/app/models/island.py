@@ -3,6 +3,7 @@ from tortoise import fields
 from app.models.base import BaseModel
 
 ISLAND_CAPACITY: int = 4
+MAX_ISLAND_CAPACITY: int = 8
 
 
 class Island(BaseModel):
