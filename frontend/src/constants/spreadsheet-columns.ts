@@ -1,0 +1,18 @@
+export const spreadsheetColumns = [
+  'nome',
+  'ip',
+  'setor',
+  'mac',
+  'mac wi-fi',
+  'modelo',
+  'user',
+  'processador',
+  'memoria',
+  'disco',
+  'marca',
+  'partnumber',
+  'patrimonio',
+  'desktop',
+  'tipo',
+  'so',
+] as const

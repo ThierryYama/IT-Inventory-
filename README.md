@@ -1,225 +1,309 @@
-# Visualizador de Ativos por Ilha
+# IT Inventory Visualizer
 
-Aplicacao web para visualizar computadores da empresa de forma mais proxima de um layout fisico, a partir de uma planilha Excel ou CSV.
+Aplicacao full stack para importar planilhas de inventario, persistir ativos em PostgreSQL e visualizar a distribuicao de maquinas por setor e ilha.
 
-O projeto foi pensado para substituir um processo manual feito no Visio, em que cada ilha precisava ser montada individualmente. Aqui, o usuario importa uma planilha com dados como `hostname`, `usuario`, `setor`, `mac` e campos relacionados, e a interface organiza automaticamente os ativos por setor em ilhas com ate 4 posicoes.
+O projeto foi organizado como monorepo, com frontend em React/Vite e backend em FastAPI. A aplicacao permite:
 
-## Objetivo
+- importar planilhas `CSV`, `XLS` e `XLSX`
+- criar, editar, mover e excluir maquinas
+- visualizar historico de movimentacao e edicao
+- criar ilhas com capacidade personalizada
+- excluir ilhas vazias
+- exportar o inventario consolidado em CSV
 
-O foco deste projeto e facilitar a visualizacao operacional dos ativos de TI, principalmente computadores, de um jeito simples e rapido:
+## Visao Geral
 
-- importar uma planilha existente
-- agrupar os computadores por setor
-- montar ilhas visuais com 4 posicoes
-- localizar ativos por busca e filtro
-- reorganizar a posicao dos computadores visualmente com drag and drop
-- gerar uma visualizacao limpa para consulta ou impressao em PDF
+### Stack principal
 
-## Contexto do problema
+- Frontend: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query, Axios, DnD Kit, Framer Motion
+- Backend: FastAPI, Tortoise ORM, PostgreSQL, Uvicorn
+- Importacao: `openpyxl`, `xlrd`, `python-multipart`
+- Infra local: Docker Compose
 
-Antes, a organizacao visual das maquinas era feita manualmente no Microsoft Visio, com uma representacao de ilha e os computadores distribuidos visualmente. Esse processo funcionava, mas era demorado, repetitivo e dependia de integracoes pagas para automatizar a leitura da planilha.
+### Estrutura do repositorio
 
-Este projeto resolve esse problema com uma abordagem mais simples:
+- `frontend/`: interface web
+- `backend/`: API, models, services e schemas
+- `docker-compose.yml`: banco PostgreSQL e backend
+- `.env.example`: variaveis de ambiente de referencia
+- `public/assets-exemplo.csv`: planilha de exemplo para testes
 
-- sem backend
-- sem banco de dados
-- sem dependencia de integracao paga com Excel
-- com leitura local do arquivo diretamente no navegador
-
-## Como funciona
-
-1. O usuario faz upload de um arquivo `.xlsx`, `.xls` ou `.csv`.
-2. O sistema le os dados da planilha no navegador.
-3. Os cabecalhos sao normalizados para aceitar variacoes de nomes, como:
-   - `hostname`
-   - `usuario`
-   - `setor`
-   - `mac`
-   - `localizacao`
-   - `modelo`
-   - `patrimonio`
-4. Os ativos sao agrupados por setor.
-5. Cada setor e dividido em ilhas de 4 posicoes.
-6. A interface monta automaticamente os cards visuais dos computadores.
-7. O usuario pode arrastar os ativos para trocar de posicao dentro do mesmo setor.
-
-## Funcionalidades atuais
-
-- Upload de planilha por clique ou drag and drop
-- Leitura de Excel e CSV no navegador
-- Normalizacao flexivel de colunas
-- Agrupamento automatico por setor
-- Geração de ilhas com ate 4 computadores
-- Busca global por hostname, usuario, MAC, modelo e outros campos
-- Filtro por setor
-- Troca visual de posicao por arrastar e soltar
-- Impressao da visualizacao para PDF
-- Ocultacao de campos vazios para evitar poluicao visual
-
-## Regras visuais do projeto
-
-- Cada ilha representa um grupo visual de 4 posicoes.
-- Cada card representa um computador.
-- O nome do usuario aparece em destaque no topo do card.
-- O hostname aparece na area principal do equipamento.
-- Campos vazios nao sao exibidos.
-- O layout foi pensado para consulta rapida por equipes de TI.
-
-## Stack utilizada
-
-- `React 19`
-- `TypeScript`
-- `Vite`
-- `Tailwind CSS`
-- `xlsx` para leitura de planilhas
-- `lucide-react` para icones
-- `framer-motion` para animacoes
-- `@dnd-kit/core`, `@dnd-kit/sortable` e `@dnd-kit/utilities` para drag and drop
-
-## Estrutura principal
-
-Arquivos mais importantes do projeto:
-
-- `src/App.tsx`: composicao principal da tela, filtros, resumo, upload e contexto de drag and drop
-- `src/helpers/parse-spreadsheet-file.ts`: leitura e normalizacao da planilha
-- `src/helpers/group-assets-by-sector.ts`: agrupamento por setor e montagem das ilhas
-- `src/helpers/update-asset-positions-after-drop.ts`: troca de posicoes apos arrastar e soltar
-- `src/components/asset-node.tsx`: card visual de cada computador
-- `src/components/island-card.tsx`: renderizacao visual da ilha
-- `src/components/sector-section.tsx`: agrupamento visual por setor
-
-## Fluxo de dados
+## Arquitetura
 
 ```mermaid
-flowchart TD
-  spreadsheetFile["Planilha Excel ou CSV"] --> parser["parseSpreadsheetFile"]
-  parser --> normalizedAssets["Ativos normalizados"]
-  normalizedAssets --> groupedAssets["groupAssetsBySector"]
-  groupedAssets --> sectorView["Setores e ilhas"]
-  sectorView --> dragDrop["Drag and Drop"]
-  dragDrop --> positionUpdate["updateAssetPositionsAfterDrop"]
-  positionUpdate --> sectorView
+flowchart LR
+    User[Usuario] --> Frontend[Frontend React Vite]
+    Frontend -->|HTTP /api| Backend[FastAPI]
+    Backend --> Services[Services]
+    Services --> ORM[Tortoise ORM]
+    ORM --> DB[(PostgreSQL)]
+    User -->|Importa CSV XLS XLSX| Frontend
+    Frontend -->|multipart/form-data| Backend
+    Backend --> History[Historico de eventos]
+    History --> DB
 ```
 
-## Limitacoes atuais
+## Fluxo da aplicacao
 
-- A troca de posicao funciona apenas dentro do mesmo setor.
-- Os dados nao sao persistidos apos atualizar a pagina.
-- O projeto depende de a planilha conter cabecalhos minimamente reconheciveis.
-- Ainda nao existe exportacao estruturada da nova organizacao para um novo arquivo.
+1. O usuario importa uma planilha pela interface.
+2. O frontend envia o arquivo para `POST /api/inventory/bulk-import`.
+3. O backend processa as colunas, normaliza os dados e cria ou atualiza ativos.
+4. Os ativos sao distribuidos nas ilhas do setor, respeitando a capacidade configurada de cada ilha.
+5. O frontend consulta setores, ilhas e ativos e renderiza a topologia visual.
+6. Movimentacoes, edicoes, criacoes e importacoes ficam registradas no historico.
 
-## Possiveis proximos passos
+## Requisitos
 
-- persistir a organizacao no `localStorage`
-- permitir mover ativos entre setores
-- exportar a nova distribuicao para Excel ou JSON
-- adicionar visualizacao por sala, andar ou unidade
-- criar modo de mapa fisico mais proximo da planta real
+Para rodar sem Docker:
 
-## Como rodar o projeto
+- Node.js 20+
+- npm 10+
+- Python 3.12+
+- PostgreSQL 16+
 
-1. Abra um terminal na pasta do projeto:
+Para rodar com Docker:
 
-```powershell
-cd c:\IT
+- Docker
+- Docker Compose
+
+## Variaveis de ambiente
+
+Crie o arquivo `.env` na raiz usando o `.env.example`:
+
+```bash
+cp .env.example .env
 ```
 
-2. Instale as dependencias:
+Valores padrao atuais:
 
-```powershell
+```env
+PROJECT_NAME=IT Backend
+APP_ENV=development
+BACKEND_HOST=0.0.0.0
+BACKEND_PORT=8000
+POSTGRES_DB=it_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_HOST=db
+POSTGRES_PORT=5432
+```
+
+## Como rodar com Docker
+
+Essa e a forma mais direta para subir banco e backend.
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+Servicos esperados:
+
+- Backend: `http://localhost:8000`
+- Healthcheck: `http://localhost:8000/health`
+- PostgreSQL: `localhost:${POSTGRES_PORT}`
+
+Depois disso, rode o frontend separadamente:
+
+```bash
+cd frontend
 npm install
-```
-
-3. Inicie o ambiente de desenvolvimento:
-
-```powershell
 npm run dev
 ```
 
-4. Abra no navegador a URL exibida pelo Vite, normalmente:
+Frontend esperado:
 
-```text
-http://localhost:5173
+- `http://localhost:5173`
+
+O `Vite` ja possui proxy para `http://localhost:8000` nas rotas `/api` e `/health`.
+
+## Como rodar sem Docker
+
+### 1. Backend
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-## Comandos uteis
+### 2. Frontend
 
-```powershell
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 3. Banco
+
+Garanta que o PostgreSQL esteja rodando e que as variaveis do `.env` apontem para ele.
+
+## Scripts uteis
+
+### Frontend
+
+```bash
+cd frontend
 npm run dev
 npm run build
-npm run preview
 npm run lint
 ```
-# React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+### Backend
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+cd backend
+python3 -m compileall app
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Rotas principais da API
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### Health
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- `GET /health`
+
+### Importacao
+
+- `POST /api/inventory/bulk-import`
+
+### Ativos
+
+- `GET /api/assets`
+- `GET /api/assets/{id}`
+- `POST /api/assets`
+- `PUT /api/assets/{id}`
+- `PATCH /api/assets/{id}`
+- `PATCH /api/assets/{id}/move`
+- `DELETE /api/assets/{id}`
+- `GET /api/assets/{id}/history`
+
+Filtros relevantes:
+
+- `GET /api/assets?sector=Financeiro`
+- `GET /api/assets?search=DSK-123`
+
+### Setores e ilhas
+
+- `GET /api/sectors`
+- `GET /api/sectors/{sector_name}/islands`
+- `POST /api/sectors/{sector_name}/islands`
+- `DELETE /api/sectors/islands/{island_id}`
+
+### Exportacao
+
+- `GET /api/export`
+
+## Exemplos de uso da API
+
+### Criar uma maquina
+
+```bash
+curl -X POST http://localhost:8000/api/assets \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "DSK-900",
+    "sector_name": "Financeiro",
+    "desktop_name": "FIN-900",
+    "user_name": "Maria"
+  }'
 ```
+
+### Criar uma ilha com 2 slots
+
+```bash
+curl -X POST http://localhost:8000/api/sectors/Financeiro/islands \
+  -H "Content-Type: application/json" \
+  -d '{
+    "capacity": 2
+  }'
+```
+
+### Excluir uma ilha vazia
+
+```bash
+curl -X DELETE http://localhost:8000/api/sectors/islands/12
+```
+
+### Exportar inventario
+
+```bash
+curl -L http://localhost:8000/api/export -o inventory-export.csv
+```
+
+## Comportamentos importantes
+
+### Ilhas
+
+- A capacidade padrao de novas ilhas automaticas e `4`
+- O limite maximo para criacao manual e `8`
+- Ilhas vazias podem ser excluidas manualmente
+- A exclusao reordena a sequencia das ilhas do setor
+- O backend respeita capacidades diferentes dentro do mesmo setor
+
+### Historico
+
+Eventos que ficam registrados:
+
+- criacao
+- importacao
+- atualizacao
+- movimentacao
+
+O frontend traduz esses eventos em linguagem natural no modal de historico.
+
+## Como validar o ambiente
+
+### Validar backend
+
+```bash
+curl http://localhost:8000/health
+```
+
+Resposta esperada:
+
+```json
+{
+  "status": "ok",
+  "environment": "development"
+}
+```
+
+### Validar frontend
+
+1. Abrir `http://localhost:5173`
+2. Importar `assets-exemplo.csv`
+3. Criar uma nova maquina
+4. Criar uma ilha personalizada
+5. Arrastar uma maquina para outro slot
+6. Abrir o historico da maquina
+7. Exportar o CSV
+
+## Como visualizar as tabelas no banco
+
+Se estiver usando Docker:
+
+```bash
+docker exec -it it-db-1 psql -U postgres -d it_db
+```
+
+Dentro do `psql`:
+
+```sql
+\dt
+\d assets
+\d islands
+\d sectors
+\d asset_history
+select * from sectors;
+select * from islands order by sector_id, sequence_number;
+select * from assets order by sector_id, island_id, slot_index;
+```
+
+## Observacoes
+
+- O backend cria schemas automaticamente no startup via Tortoise ORM.
+- O frontend depende do backend rodando em `localhost:8000` durante o desenvolvimento.
+- O processamento da planilha acontece exclusivamente no backend.

@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+tortoise-orm
+asyncpg
+python-dotenv
+python-multipart
+openpyxl
+xlrd
